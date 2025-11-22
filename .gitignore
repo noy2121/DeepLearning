@@ -1,0 +1,15 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+
+# Environments
+.venv
+env/
+venv/
+
+# data files
+data/
+*.sqlite3
+*.zip
