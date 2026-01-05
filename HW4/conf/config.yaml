@@ -1,0 +1,23 @@
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+
+model:
+  model_name: ResNet18  # ResNet18 / ResNet50
+  num_classes: 10
+
+train:
+  batch_size: 128
+  learning_rate: 0.001
+  num_epochs: 50
+  optimizer: adam
+  weight_decay: 0.0001
+  momentum: 0.9
+
+data:
+  dataset: cifar10
+  num_workers: 4
+  download: true
+  mean: [0.4914, 0.4822, 0.4465]
+  std: [0.2023, 0.1994, 0.201]
