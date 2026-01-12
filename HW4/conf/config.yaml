@@ -3,19 +3,25 @@ hydra:
   run:
     dir: .
 
+mode: pretrained  # pretrained / scratch
+load_weights: false  
+checkpoints_dir: checkpoints
+results_dir: results  
+
 model:
   model_name: ResNet18  # ResNet18 / ResNet50 / CustomCNN
   num_classes: 10
 
   cnn:
     input_channels: 3
-    use_batch_norm: true  
-    use_dropout: true 
-    dropout_rate: 0.3  
-    num_layers: [32, 64]  
-    kernel_size: [3, 3]  
-    stride: [1, 1]  
-    fc_layers: [128]  
+    use_batch_norm: true
+    use_dropout: true
+    dropout_rate: 0.3
+    l2_reg: 0.0001
+    num_layers: [32, 64]
+    kernel_size: [3, 3]
+    stride: [1, 1]
+    fc_layers: [128]
 
 train:
   batch_size: 128
@@ -25,10 +31,11 @@ train:
   weight_decay: 0.0001
   momentum: 0.9
   early_stopping_patience: 5
+  freeze: false  # Only applies when mode=pretrained. If true, freeze backbone and only train classifier head
 
 data:
   dataset: cifar10
-  num_workers: 4
   download: true
   mean: [0.4914, 0.4822, 0.4465]
   std: [0.2023, 0.1994, 0.201]
+

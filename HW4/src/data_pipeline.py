@@ -7,9 +7,8 @@ from torch.utils.data import DataLoader, random_split
 
 
 class CIFAR10Pipeline:
-    def __init__(self, cfg, num_workers=4, download=True, val_split=0.1):
+    def __init__(self, cfg, download=True, val_split=0.1):
         self.batch_size = cfg.train.batch_size
-        self.num_workers = num_workers
         self.download = download
         self.val_split = val_split
         self.mean = cfg.data.mean
@@ -47,16 +46,10 @@ class CIFAR10Pipeline:
             root='./data', train=False, download=self.download, transform=self.test_transform
         )
         
-        self.train_loader = DataLoader(
-            train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers
-        )
+        self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         
-        self.val_loader = DataLoader(
-            val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers
-        )
+        self.val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
         
-        self.test_loader = DataLoader(
-            test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers
-        )
+        self.test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=False)
         
         return self.train_loader, self.val_loader, self.test_loader

@@ -1,14 +1,18 @@
 # imports
 
+from pathlib import Path
+from tqdm import tqdm
+import numpy as np
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision.models import resnet18, resnet50, ResNet18_Weights, ResNet50_Weights
-from pathlib import Path
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
-import seaborn as sns
-from tqdm import tqdm
+
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, roc_curve, auc
+from sklearn.preprocessing import label_binarize
 
 from .cnn_model import CustomCNN
 
@@ -201,90 +205,171 @@ class Classifier:
         print(f'Model loaded from {path}')
     
     def plot_training_curves(self, save_path=None):
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-        
-        epochs = range(1, len(self.train_losses) + 1)
-        
-        ax1.plot(epochs, self.train_losses, label='Train Loss', marker='o')
-        ax1.plot(epochs, self.val_losses, label='Val Loss', marker='s')
-        ax1.set_xlabel('Epoch')
-        ax1.set_ylabel('Loss')
-        ax1.set_title('Training and Validation Loss')
-        ax1.legend()
-        ax1.grid(True)
-        
-        ax2.plot(epochs, self.train_accs, label='Train Acc', marker='o')
-        ax2.plot(epochs, self.val_accs, label='Val Acc', marker='s')
-        ax2.set_xlabel('Epoch')
-        ax2.set_ylabel('Accuracy (%)')
-        ax2.set_title('Training and Validation Accuracy')
-        ax2.legend()
-        ax2.grid(True)
-        
-        plt.tight_layout()
-        
+        epochs = list(range(1, len(self.train_losses) + 1))
+
+        # Create subplots with 1 row and 2 columns
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=('Training and Validation Loss', 'Training and Validation Accuracy'),
+            horizontal_spacing=0.12
+        )
+
+        # Plot 1: Loss curves
+        fig.add_trace(
+            go.Scatter(x=epochs, y=self.train_losses, mode='lines+markers',
+                      name='Train Loss', line=dict(color='#636EFA'), marker=dict(symbol='circle')),
+            row=1, col=1
+        )
+        fig.add_trace(
+            go.Scatter(x=epochs, y=self.val_losses, mode='lines+markers',
+                      name='Val Loss', line=dict(color='#EF553B'), marker=dict(symbol='square')),
+            row=1, col=1
+        )
+
+        # Plot 2: Accuracy curves
+        fig.add_trace(
+            go.Scatter(x=epochs, y=self.train_accs, mode='lines+markers',
+                      name='Train Acc', line=dict(color='#636EFA'), marker=dict(symbol='circle')),
+            row=1, col=2
+        )
+        fig.add_trace(
+            go.Scatter(x=epochs, y=self.val_accs, mode='lines+markers',
+                      name='Val Acc', line=dict(color='#EF553B'), marker=dict(symbol='square')),
+            row=1, col=2
+        )
+
+        # Update axes
+        fig.update_xaxes(title_text="Epoch", row=1, col=1)
+        fig.update_xaxes(title_text="Epoch", row=1, col=2)
+        fig.update_yaxes(title_text="Loss", row=1, col=1)
+        fig.update_yaxes(title_text="Accuracy (%)", row=1, col=2)
+
+        # Update layout
+        fig.update_layout(
+            height=400,
+            width=1000,
+            showlegend=True,
+            font=dict(size=11)
+        )
+
         if save_path:
-            Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f'Training curves saved to {save_path}')
-        
-        plt.show()
-    
+            output_path = f'{save_path}/training_curves.html'
+            fig.write_html(output_path)
+            print(f'Training curves saved to {output_path}')
+
     def plot_confusion_matrix(self, test_loader, class_names=None, save_path=None):
         self.model.eval()
         all_preds = []
         all_labels = []
-        
+
         with torch.no_grad():
             for inputs, labels in test_loader:
                 inputs = inputs.to(self.device)
                 outputs = self.model(inputs)
                 _, predicted = outputs.max(1)
-                
+
                 all_preds.extend(predicted.cpu().numpy())
                 all_labels.extend(labels.numpy())
-        
+
         cm = confusion_matrix(all_labels, all_preds)
-        
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                    xticklabels=class_names, yticklabels=class_names)
-        plt.xlabel('Predicted')
-        plt.ylabel('True')
-        plt.title('Confusion Matrix')
-        
+
+        # Create Plotly heatmap
+        fig = go.Figure(data=go.Heatmap(
+            z=cm,
+            x=class_names if class_names else list(range(len(cm))),
+            y=class_names if class_names else list(range(len(cm))),
+            colorscale='Blues',
+            text=cm,
+            texttemplate='%{text}',
+            textfont={"size": 12},
+            colorbar=dict(title="Count")
+        ))
+
+        fig.update_layout(
+            title='Confusion Matrix',
+            xaxis_title='Predicted',
+            yaxis_title='True',
+            width=700,
+            height=700,
+            font=dict(size=12),
+            yaxis=dict(autorange='reversed')  # Reverse y-axis to match standard CM orientation
+        )
+
         if save_path:
-            Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f'Confusion matrix saved to {save_path}')
-        
-        plt.show()
-        
+            output_path = f'{save_path}/confusion_matrix.html'
+            fig.write_html(output_path)
+            print(f'Confusion matrix saved to {output_path}')
+
         return all_preds, all_labels
     
     def compute_metrics(self, test_loader):
         self.model.eval()
         all_preds = []
         all_labels = []
-        
+
         with torch.no_grad():
             for inputs, labels in test_loader:
                 inputs = inputs.to(self.device)
                 outputs = self.model(inputs)
                 _, predicted = outputs.max(1)
-                
+
                 all_preds.extend(predicted.cpu().numpy())
                 all_labels.extend(labels.numpy())
-        
+
         precision, recall, f1, _ = precision_recall_fscore_support(
             all_labels, all_preds, average='macro', zero_division=0
         )
-        
+
         print(f'\nTest Set Metrics:')
         print(f'Precision: {precision:.4f}')
         print(f'Recall: {recall:.4f}')
         print(f'F1-Score: {f1:.4f}')
-        
+
         return precision, recall, f1
-        
-        
+
+    def compute_roc_curve(self, test_loader):
+
+        self.model.eval()
+        all_probs = []
+        all_labels = []
+
+        with torch.no_grad():
+            for inputs, labels in test_loader:
+                inputs = inputs.to(self.device)
+                outputs = self.model(inputs)
+                probs = torch.softmax(outputs, dim=1)
+
+                all_probs.append(probs.cpu().numpy())
+                all_labels.extend(labels.numpy())
+
+        all_probs = np.vstack(all_probs)
+        all_labels = np.array(all_labels)
+
+        # Binarize labels for multi-class ROC
+        all_labels_bin = label_binarize(all_labels, classes=range(self.num_classes))
+
+        # Compute ROC curve and AUC for each class
+        fpr_dict = {}
+        tpr_dict = {}
+        auc_dict = {}
+
+        for i in range(self.num_classes):
+            fpr_dict[i], tpr_dict[i], _ = roc_curve(all_labels_bin[:, i], all_probs[:, i])
+            auc_dict[i] = auc(fpr_dict[i], tpr_dict[i])
+
+        # Compute macro-average ROC curve
+        all_fpr = np.unique(np.concatenate([fpr_dict[i] for i in range(self.num_classes)]))
+        mean_tpr = np.zeros_like(all_fpr)
+
+        for i in range(self.num_classes):
+            mean_tpr += np.interp(all_fpr, fpr_dict[i], tpr_dict[i])
+
+        mean_tpr /= self.num_classes
+
+        # Compute macro-average AUC
+        macro_auc = auc(all_fpr, mean_tpr)
+
+        print(f'\nROC AUC (macro-average): {macro_auc:.4f}')
+
+        return all_fpr.tolist(), mean_tpr.tolist(), macro_auc
+
