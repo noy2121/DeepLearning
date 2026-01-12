@@ -30,8 +30,11 @@ def run_experiment(cfg, train_loader, val_loader, test_loader, class_names, pret
     )
 
     # Train
+    early_stopping_patience = cfg.train.get('early_stopping_patience', None)
     print(f"\nTraining {model_name} for {cfg.train.num_epochs} epochs...")
-    classifier.train(train_loader, val_loader, cfg.train.num_epochs)
+    if early_stopping_patience:
+        print(f"Early stopping enabled with patience={early_stopping_patience}")
+    classifier.train(train_loader, val_loader, cfg.train.num_epochs, early_stopping_patience=early_stopping_patience)
 
     # Evaluate on test set
     print(f"\nEvaluating {model_name} on test set...")

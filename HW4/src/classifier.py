@@ -8,6 +8,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 import seaborn as sns
+from tqdm import tqdm
 
 from .cnn_model import CustomCNN
 
@@ -92,65 +93,88 @@ class Classifier:
         running_loss = 0.0
         correct = 0
         total = 0
-        
-        for inputs, labels in train_loader:
+
+        pbar = tqdm(train_loader, desc='Training', leave=False)
+        for inputs, labels in pbar:
             inputs, labels = inputs.to(self.device), labels.to(self.device)
-            
+
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
             loss = self.criterion(outputs, labels)
             loss.backward()
             self.optimizer.step()
-            
+
             running_loss += loss.item() * inputs.size(0)
             _, predicted = outputs.max(1)
             total += labels.size(0)
             correct += predicted.eq(labels).sum().item()
-        
+
+            # Update progress bar
+            pbar.set_postfix({'loss': loss.item(), 'acc': f'{100. * correct / total:.2f}%'})
+
         epoch_loss = running_loss / total
         epoch_acc = 100. * correct / total
-        
+
         return epoch_loss, epoch_acc
     
-    def evaluate(self, val_loader):
+    def evaluate(self, val_loader, desc='Validation'):
         self.model.eval()
         running_loss = 0.0
         correct = 0
         total = 0
-        
+
+        pbar = tqdm(val_loader, desc=desc, leave=False)
         with torch.no_grad():
-            for inputs, labels in val_loader:
+            for inputs, labels in pbar:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
-                
+
                 outputs = self.model(inputs)
                 loss = self.criterion(outputs, labels)
-                
+
                 running_loss += loss.item() * inputs.size(0)
                 _, predicted = outputs.max(1)
                 total += labels.size(0)
                 correct += predicted.eq(labels).sum().item()
-        
+
+                # Update progress bar
+                pbar.set_postfix({'loss': loss.item(), 'acc': f'{100. * correct / total:.2f}%'})
+
         epoch_loss = running_loss / total
         epoch_acc = 100. * correct / total
-        
+
         return epoch_loss, epoch_acc
     
-    def train(self, train_loader, val_loader, num_epochs):
+    def train(self, train_loader, val_loader, num_epochs, early_stopping_patience=None):
+        best_val_loss = float('inf')
+        patience_counter = 0
+
         for epoch in range(num_epochs):
             train_loss, train_acc = self.train_epoch(train_loader)
             val_loss, val_acc = self.evaluate(val_loader)
-            
+
             self.train_losses.append(train_loss)
             self.val_losses.append(val_loss)
             self.train_accs.append(train_acc)
             self.val_accs.append(val_acc)
-            
+
             print(f'Epoch [{epoch+1}/{num_epochs}] '
                   f'Train Loss: {train_loss:.4f} Acc: {train_acc:.2f}% | '
                   f'Val Loss: {val_loss:.4f} Acc: {val_acc:.2f}%')
+
+            # Early stopping logic
+            if early_stopping_patience is not None:
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+                    if patience_counter >= early_stopping_patience:
+                        print(f'\nEarly stopping triggered after {epoch+1} epochs (patience={early_stopping_patience})')
+                        print(f'Best validation loss: {best_val_loss:.4f}')
+                        break
     
     def test(self, test_loader):
-        test_loss, test_acc = self.evaluate(test_loader)
+        test_loss, test_acc = self.evaluate(test_loader, desc='Testing')
         print(f'Test Loss: {test_loss:.4f} Acc: {test_acc:.2f}%')
         return test_loss, test_acc
     
