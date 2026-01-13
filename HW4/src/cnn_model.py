@@ -15,7 +15,6 @@ class CustomCNN(nn.Module):
         self.use_batch_norm = cfg.use_batch_norm
         self.use_dropout = cfg.use_dropout
         self.dropout_rate = cfg.dropout_rate
-        self.l2_reg = cfg.l2_reg
 
         num_layers = cfg.num_layers
         kernel_sizes = cfg.kernel_size
