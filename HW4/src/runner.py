@@ -187,8 +187,6 @@ class ExperimentRunner:
             xaxis_title='Model',
             yaxis_title='Score (%)',
             barmode='group',
-            height=600,
-            width=1000,
             font=dict(size=12),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             yaxis=dict(range=[0, 105])
@@ -232,10 +230,8 @@ class ExperimentRunner:
                 title='ROC Curves Comparison',
                 xaxis_title='False Positive Rate',
                 yaxis_title='True Positive Rate',
-                height=600,
-                width=800,
                 font=dict(size=12),
-                legend=dict(orientation="v", yanchor="bottom", y=0.01, xanchor="right", x=0.99),
+                legend=dict(orientation="v", y=0.01, x=0.99),
                 xaxis=dict(range=[0, 1]),
                 yaxis=dict(range=[0, 1])
             )
@@ -246,14 +242,18 @@ class ExperimentRunner:
         else:
             print("\nWarning: ROC data not found. Skipping ROC plot.")
 
-        # Print Comparison Table 
-        print("\n" + "="*80)
-        print("Model Comparison Summary")
-        print("="*80)
-        print(f"{'Model':<25} {'Test Acc':<12} {'Precision':<12} {'Recall':<12} {'F1-Score':<12}")
-        print("-"*80)
-        for model in models:
-            results = experiment_results[model]
-            print(f"{model:<25} {results['test_acc']:>10.2f}% "
-                  f"{results['precision']*100:>10.2f}% {results['recall']*100:>10.2f}% {results['f1']*100:>10.2f}%")
-        print("="*80)
+        # Save results to csv
+        data_list = []
+        for model, results in experiment_results.items():
+            data_list.append({
+                "Model": model,
+                "Test Accuracy": results['test_acc'],
+                "Precision": results['precision'] * 100,
+                "Recall": results['recall'] * 100,
+                "F1": results['f1'] * 100
+            })
+
+        df = pd.DataFrame(data_list)
+        df.to_csv(f"{save_dir}/comparison_results.csv", index=False)
+
+        print(df)
