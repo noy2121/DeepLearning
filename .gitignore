@@ -13,3 +13,7 @@ venv/
 data/
 *.sqlite3
 *.zip
+
+# Weights & results
+checkpoint/
+results/
