@@ -15,5 +15,5 @@ data/
 *.zip
 
 # Weights & results
-checkpoint/
+checkpoints/
 results/
