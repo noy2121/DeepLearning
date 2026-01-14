@@ -46,8 +46,9 @@ class CustomCNN(nn.Module):
                 block.append(nn.BatchNorm2d(out_channels))
 
             block.append(nn.ReLU(inplace=True))
-            block.append(nn.MaxPool2d(kernel_size=2, stride=2))
-
+            if (i + 1) % 2 == 0:
+                block.append(nn.MaxPool2d(kernel_size=2, stride=2))
+                
             if self.use_dropout:
                 block.append(nn.Dropout2d(p=self.dropout_rate))
 
