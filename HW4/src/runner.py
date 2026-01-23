@@ -82,6 +82,7 @@ class ExperimentRunner:
     def train(self):
         early_stopping_patience = self.cfg.train.early_stopping_patience
         print(f"\nTraining for {self.cfg.train.num_epochs} epochs...")
+        print(f"\nTraining on {self.classifier.device}")
 
         self.classifier.train(
             self.train_loader,

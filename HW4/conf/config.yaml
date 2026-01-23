@@ -9,7 +9,7 @@ checkpoints_dir: checkpoints
 results_dir: results  
 
 model:
-  model_name: ResNet18  # ResNet18 / ResNet50 / CustomCNN
+  model_name: ResNet50  # ResNet18 / ResNet50 / CustomCNN
   num_classes: 10
 
   cnn:
@@ -26,12 +26,12 @@ model:
 train:
   batch_size: 128
   learning_rate: 0.001
-  num_epochs: 1
-  optimizer: adam
+  num_epochs: 40              # 20
+  optimizer: adam            # adam / sgd
   weight_decay: 0.0001
   momentum: 0.9
   early_stopping_patience: 5
-  freeze: false  # Only applies when mode=pretrained. If true, freeze backbone and only train classifier head
+  freeze: true  # Only applies when mode=pretrained. If true, freeze backbone and only train classifier head
 
 data:
   dataset: cifar10
@@ -39,3 +39,4 @@ data:
   mean: [0.4914, 0.4822, 0.4465]
   std: [0.2023, 0.1994, 0.201]
 
+  
